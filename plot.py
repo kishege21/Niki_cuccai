@@ -47,7 +47,7 @@ class MutualFund(object):
         self.fund_purchases = fund.get('vetel')
         self.fund_history = dict()
         self.purchase_history = dict()
-        self.oldest_date = n_days_ago_unix_timestamp(max(days, 30))
+        self.oldest_date = n_days_ago_unix_timestamp(max(days, 60))
         self.latest_rate = None
 
     def get_history(self):
