@@ -67,7 +67,10 @@ class MutualFund(object):
                 self.fund_history[day_string] = item[1]
 
     def calculate_gain_percent(self, rate_at_buy):
-        return round(float(self.latest_rate) / float(rate_at_buy) * 100, 2)
+        _return = 0
+        if rate_at_buy:
+            _return = round(float(self.latest_rate) / float(rate_at_buy) * 100, 2)
+        return _return
 
     def add_purchase_history_to_fund_history(self):
         for day in self.fund_purchases:
