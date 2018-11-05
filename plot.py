@@ -52,12 +52,13 @@ class MutualFund(object):
 
     def get_history(self):
         _res = requests.get(self.base_url + self.fund_isin)
-        if _res.status_code != 200:
-            print('Error occurred: {}'.format(_res))
+        if _res.status_code != 200 or len(_res.text):
+            print('Error occurred: {}{}: {}, Size:'.format(self.base_url, self.fund_isin,_res, len(_res.text)))
         return json.loads(_res.text)
 
     def process_history(self):
         _history = self.get_history()
+        print(_history)
         self.latest_rate = _history[-1][1]
 
         for item in _history:
