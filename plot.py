@@ -1,11 +1,11 @@
-import os
+import glob
 import json
+import os
 from datetime import datetime, timedelta
 from time import strftime, localtime
-import requests
-import glob
 
 import pygal
+import requests
 
 from alapok import alapok
 
@@ -51,14 +51,37 @@ class MutualFund(object):
         self.latest_rate = None
 
     def get_history(self):
-        _res = requests.get(self.base_url + self.fund_isin)
-        if _res.status_code != 200 or len(_res.text):
-            print('Error occurred: {}{}: {}, Size:'.format(self.base_url, self.fund_isin,_res, len(_res.text)))
-        return json.loads(_res.text)
+        """
+                :return: list example: [[1444255200000,1.077956],[1444341600000,1.079422],... ]
+        """
+        base_url = "https://www.kh.hu/megtakaritas-befektetes/hozamszamlalo-befektetesi-alap?" \
+                   "p_p_id=yieldcalculator_WAR_yieldcalculatorportlet&p_p_lifecycle=2&p_p_state=normal&" \
+                   "p_p_mode=view&p_p_resource_id=cmdGetChartData"
+        data = {"yieldcalculator_WAR_yieldcalculatorportlet_dateFrom": int(self.oldest_date) * 1000,
+                "_yieldcalculator_WAR_yieldcalculatorportlet_dateTo": datetime.utcnow().timestamp() * 1000,
+                "_yieldcalculator_WAR_yieldcalculatorportlet_investments": self.fund_isin,
+                "ajax": 0
+                }
+        _req = requests.post(base_url, data=data)
+        if _req.status_code != 200:
+            print('Error occurred: {}{}: {}, Size:'.format(self.base_url, self.fund_isin, _req, len(_req.text)))
+        _tmp = json.loads(_req.text)
+        resp = list()
+        fund_index = 0
+        for index in range(len(_tmp['diagram']['series'])):
+            if _tmp['diagram']['series'][index].get('text').startswith('K&H'):
+                fund_index = index
+                print("Using {} data series".format(_tmp['diagram']['series'][index].get('text')))
+                break
+        count = 0
+        for timestamp in _tmp['diagram']['scale-x']['labels']:
+            resp.append([int(datestr_to_unixtimestamp(timestamp)) * 1000,
+                         _tmp['diagram']['series'][fund_index]['values'][count]])
+            count += 1
+        return resp
 
     def process_history(self):
         _history = self.get_history()
-        print(_history)
         self.latest_rate = _history[-1][1]
 
         for item in _history:
@@ -124,7 +147,7 @@ class MutualFund(object):
                 _max_gain = _purchase_gain_percent
         line_chart = pygal.Line(print_values=False, show_legend=False)
         line_chart.config.x_label_rotation = 45
-        line_chart.x_labels_major = _x_legends[::5]
+        line_chart.x_labels_major = _x_legends[::7]
         line_chart.config.x_title = "Dátum"
         line_chart.config.y_title = "Legnagyob hozam: {}%".format(_max_gain)
         line_chart.config.width = 1680
@@ -135,7 +158,8 @@ class MutualFund(object):
         line_chart.add('Vétel', _purchases, allow_interruptions=True, print_values=True, dots_size=5)
         line_chart.render_to_file('{}.svg'.format(self.fund_name))
 
-    def save_html(self):
+    @staticmethod
+    def save_html():
         html_head = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 ' \
                     'Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"> \
                     <html xmlns="http://www.w3.org/1999/xhtml"> \
@@ -163,7 +187,7 @@ if __name__ == '__main__':
             transformed_putchase = int(datestr_to_unixtimestamp(puchase))
             if transformed_putchase < oldest_purchase:
                 oldest_purchase = transformed_putchase
-        prog = MutualFund(alap, calculate_days_difference(oldest_purchase)+2)
+        prog = MutualFund(alap, calculate_days_difference(oldest_purchase) + 2)
         prog.process_data()
         prog.render_chart()
         prog.save_html()
