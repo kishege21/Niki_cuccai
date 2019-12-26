@@ -47,6 +47,7 @@ class MutualFund(object):
         self.fund_purchases = fund.get('vetel')
         self.fund_history = dict()
         self.purchase_history = dict()
+        self.days_to_show = days
         self.oldest_date = n_days_ago_unix_timestamp(max(days, 60))
         self.latest_rate = None
 
@@ -147,7 +148,13 @@ class MutualFund(object):
                 _max_gain = _purchase_gain_percent
         line_chart = pygal.Line(print_values=False, show_legend=False)
         line_chart.config.x_label_rotation = 45
-        line_chart.x_labels_major = _x_legends[::7]
+        if self.days_to_show > 100:
+            legends = 12
+        elif self.days_to_show > 50:
+            legends = 7
+        else:
+            legends = 5
+        line_chart.x_labels_major = _x_legends[::legends]
         line_chart.config.x_title = "Dátum"
         line_chart.config.y_title = "Legnagyob hozam: {}%".format(_max_gain)
         line_chart.config.width = 1680
