@@ -40,8 +40,6 @@ def clean():
 
 class MutualFund(object):
     def __init__(self, fund, days=90):
-        self.base_url = 'https://api.bankmonitor.hu/api/public/mutual-fund/api-for-bankmonitor-hu/v4/mutual-funds/' \
-                        'exchange-rates/HUF/'
         self.fund_name = fund.get('nev')
         self.fund_isin = fund.get('isin')
         self.fund_purchases = fund.get('vetel')
@@ -65,17 +63,17 @@ class MutualFund(object):
                 }
         _req = requests.post(base_url, data=data)
         if _req.status_code != 200:
-            print('Error occurred: {}{}: {}, Size:'.format(self.base_url, self.fund_isin, _req, len(_req.text)))
+            print('Error occurred: {}{}: {}, Size:'.format(base_url, self.fund_isin, _req, len(_req.text)))
         _tmp = json.loads(_req.text)
         resp = list()
         fund_index = 0
-        for index in range(len(_tmp['diagram']['series'])):
-            if _tmp['diagram']['series'][index].get('text').startswith('K&H'):
+        for index in range(len(_tmp.get('diagram', {}).get('series', {}))):
+            if _tmp.get('diagram', {}).get('series', [])[index].get('text').startswith('K&H'):
                 fund_index = index
                 print("Using {} data series".format(_tmp['diagram']['series'][index].get('text')))
                 break
         count = 0
-        for timestamp in _tmp['diagram']['scale-x']['labels']:
+        for timestamp in _tmp.get('diagram', {}).get('scale-x', {}).get('labels', []):
             resp.append([int(datestr_to_unixtimestamp(timestamp)) * 1000,
                          _tmp['diagram']['series'][fund_index]['values'][count]])
             count += 1
@@ -83,7 +81,8 @@ class MutualFund(object):
 
     def process_history(self):
         _history = self.get_history()
-        self.latest_rate = _history[-1][1]
+        if len(_history):
+            self.latest_rate = _history[-1][1]
 
         for item in _history:
             timestamp_no_mseconfs = item[0] / 1000
