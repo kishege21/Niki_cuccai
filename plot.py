@@ -138,7 +138,11 @@ class MutualFund(object):
         _max_gain = 0
         for day in sorted(self.purchase_history.keys()):
             _purchase_gain_percent = self.purchase_history[day].get('purchase_gain_percent')
-            _history.append(self.purchase_history[day].get('rate'))
+            _history.append({
+                'value': self.purchase_history[day].get('rate'),
+                'label': '{}% comparing to latest'.format(
+                    self.calculate_gain_percent(self.purchase_history[day].get('rate')))
+            })
             _purchases.append({
                 'value': self.purchase_history[day].get('purchase_rate'),
                 'label': '{}%'.format(_purchase_gain_percent)
@@ -147,10 +151,11 @@ class MutualFund(object):
                 _max_gain = _purchase_gain_percent
         line_chart = pygal.Line(print_values=False, show_legend=False)
         line_chart.config.x_label_rotation = 45
-        if self.days_to_show > 100:
-            legends = 12
-        elif self.days_to_show > 50:
+
+        if self.days_to_show > 50:
             legends = 7
+        elif self.days_to_show > 100:
+            legends = 12
         else:
             legends = 5
         line_chart.x_labels_major = _x_legends[::legends]
